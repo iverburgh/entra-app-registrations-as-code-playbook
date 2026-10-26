@@ -1,0 +1,30 @@
+{
+  "$schema": "../schemas/environment.schema.json",
+  "name": "dev",
+  "order": 1,
+  "tokens": {
+    "environment": "dev",
+    "instance": ""
+  },
+  "owners": [
+    "orders-platform-owners"
+  ],
+  "roleMembers": {
+    "Orders.Read": [
+      "orders-developers",
+      "user:tester@example.com"
+    ],
+    "Orders.Admin": [
+      "orders-developers"
+    ],
+    "Orders.Process": [
+      "sp:id-orders-processor-dev"
+    ]
+  },
+  "redirectUris": {
+    "orders-web": [
+      "http://localhost:5173/",
+      "https://orders-dev.example.com/"
+    ]
+  }
+}

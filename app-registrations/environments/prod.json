@@ -1,0 +1,32 @@
+{
+  "$schema": "../schemas/environment.schema.json",
+  "name": "prod",
+  "order": 9,
+  "tokens": {
+    "environment": "prod",
+    "instance": ""
+  },
+  "owners": [
+    "orders-platform-owners-prod"
+  ],
+  "roleMembers": {
+    "Orders.Read": [
+      "orders-support-readonly",
+      "orders-operations"
+    ],
+    "Orders.Admin": [
+      "orders-operations"
+    ],
+    "orders-web/Orders.Admin": [
+      "orders-support-supervisors"
+    ],
+    "Orders.Process": [
+      "sp:id-orders-processor-prod"
+    ]
+  },
+  "redirectUris": {
+    "orders-web": [
+      "https://orders.example.com/"
+    ]
+  }
+}

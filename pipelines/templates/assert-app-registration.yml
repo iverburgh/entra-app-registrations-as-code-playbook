@@ -1,0 +1,85 @@
+# Preflight for an application's deployment pipeline: does its app registration exist, and its
+# certificate? If not, a person is asked to run the app registrations first, instead of the
+# deployment failing halfway or, worse, starting without an identity.
+#
+# Use it when the app registrations are applied separately from the deployments: by a person
+# with more rights, or by the app-registrations pipeline. Make the deploy job depend on both jobs:
+#
+#   jobs:
+#   - template: templates/assert-app-registration.yml
+#     parameters:
+#       name: ordersApi
+#       serviceConnection: sc-orders-dev
+#       displayName: orders-api-dev
+#       keyVault: kv-orders-dev
+#       certificateName: AppReg-orders-api-dev
+#   - deployment: Deploy
+#     dependsOn: [ordersApi_check, ordersApi_confirm]
+#     condition: and(succeeded('ordersApi_check'), in(dependencies.ordersApi_confirm.result, 'Succeeded', 'Skipped'))
+#
+# The service connection only needs to read: Application.Read.All on Microsoft Graph for the
+# application, and the Key Vault Certificates User role (or get on certificates) for the certificate.
+
+parameters:
+- name: name
+  type: string
+- name: serviceConnection
+  type: string
+- name: displayName
+  type: string
+- name: keyVault
+  type: string
+  default: ''
+- name: certificateName
+  type: string
+  default: ''
+- name: notifyUsers
+  type: string
+  default: ''
+- name: timeoutInMinutes
+  type: number
+  default: 1440
+
+jobs:
+- job: ${{ parameters.name }}_check
+  displayName: Check app registration ${{ parameters.displayName }}
+  steps:
+  - checkout: none
+
+  - task: AzureCLI@2
+    name: check
+    displayName: Look up application and certificate
+    inputs:
+      azureSubscription: ${{ parameters.serviceConnection }}
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+        $missing = @()
+        $appId = az ad app list --filter "displayName eq '${{ parameters.displayName }}'" --query '[].appId' --output tsv
+        if ($LASTEXITCODE -ne 0) { throw 'Looking up the application failed.' }
+        if (-not $appId) { $missing += "app registration '${{ parameters.displayName }}'" }
+
+        if ('${{ parameters.keyVault }}' -and '${{ parameters.certificateName }}') {
+          az keyvault certificate show --vault-name '${{ parameters.keyVault }}' --name '${{ parameters.certificateName }}' --query id --output tsv 2>$null | Out-Null
+          if ($LASTEXITCODE -ne 0) { $missing += "certificate '${{ parameters.certificateName }}' in Key Vault '${{ parameters.keyVault }}'" }
+        }
+
+        foreach ($item in $missing) { Write-Host "##vso[task.logissue type=warning]Missing: $item" }
+        $isMissing = if ($missing.Count -gt 0) { 'true' } else { 'false' }
+        Write-Host "##vso[task.setvariable variable=missing;isOutput=true]$isMissing"
+
+- job: ${{ parameters.name }}_confirm
+  displayName: Wait for app registration ${{ parameters.displayName }}
+  dependsOn: ${{ parameters.name }}_check
+  condition: and(succeeded(), eq(dependencies.${{ parameters.name }}_check.outputs['check.missing'], 'true'))
+  pool: server
+  timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
+  steps:
+  - task: ManualValidation@1
+    inputs:
+      notifyUsers: ${{ parameters.notifyUsers }}
+      instructions: >-
+        The app registration '${{ parameters.displayName }}' or its certificate does not exist yet.
+        Run the app registrations for this environment (Invoke-AppRegistrations.ps1, or the
+        app-registrations pipeline), then resume this run. Reject to stop the deployment.
+      onTimeout: reject

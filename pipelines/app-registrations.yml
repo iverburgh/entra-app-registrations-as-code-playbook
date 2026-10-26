@@ -1,0 +1,101 @@
+# Applies the app registrations of one environment: validate, plan, then apply after approval.
+#
+# Validate  runs the tests and the offline configuration check. No Azure access needed.
+# Plan      runs Invoke-AppRegistrations.ps1 -WhatIf: every change it would make, none made.
+# Apply     runs the same script for real, in a deployment job on an Azure DevOps environment.
+#           Add an approval check to that environment, so someone reads the plan first.
+#
+# Prerequisites (see docs/running-in-a-pipeline.md):
+#   - an Azure Resource Manager service connection per environment, with workload identity
+#     federation, named sc-app-registrations-<environment>
+#   - Microsoft Graph application permissions for its service principal, with admin consent
+#   - Key Vault roles on the vaults that hold credentials
+#   - Azure DevOps environments named app-registrations-<environment>, with an approval check
+#
+# Attach the Validate stage as build validation on your main branch with the path filter
+# /app-registrations/*; pull request runs stop after Plan.
+
+trigger:
+  branches:
+    include: [main]
+  paths:
+    include: [app-registrations/*]
+
+parameters:
+- name: environment
+  displayName: Environment
+  type: string
+  default: dev
+  values: [dev, test, test-2, prod]
+- name: allowUnresolvedPrincipals
+  displayName: Skip owners and role members that cannot be found (removes their access)
+  type: boolean
+  default: false
+
+variables:
+  serviceConnection: sc-app-registrations-${{ parameters.environment }}
+  scriptArguments: >-
+    -Environment '${{ parameters.environment }}'
+    ${{ iif(parameters.allowUnresolvedPrincipals, '-AllowUnresolvedPrincipals', '') }}
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: Validate
+  jobs:
+  - job: Validate
+    steps:
+    - checkout: self
+      fetchDepth: 1
+
+    - pwsh: Install-Module Pester -MinimumVersion 5.5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+      displayName: Install Pester
+
+    - pwsh: |
+        $result = Invoke-Pester -Path ./app-registrations/tests -Output Detailed -PassThru
+        if ($result.FailedCount -gt 0) { exit 1 }
+      displayName: Run tests
+
+    - pwsh: ./app-registrations/Test-AppRegistrationConfig.ps1
+      displayName: Validate configuration (offline)
+
+- stage: Plan
+  dependsOn: Validate
+  jobs:
+  - job: Plan
+    steps:
+    - checkout: self
+      fetchDepth: 1
+
+    - task: AzureCLI@2
+      displayName: Plan changes for ${{ parameters.environment }}
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: pscore
+        scriptLocation: scriptPath
+        scriptPath: app-registrations/Invoke-AppRegistrations.ps1
+        arguments: $(scriptArguments) -WhatIf
+
+- stage: Apply
+  dependsOn: Plan
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - deployment: Apply
+    environment: app-registrations-${{ parameters.environment }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # A deployment job does not check out the repository by itself.
+          - checkout: self
+            fetchDepth: 1
+
+          - task: AzureCLI@2
+            displayName: Apply changes for ${{ parameters.environment }}
+            inputs:
+              azureSubscription: $(serviceConnection)
+              scriptType: pscore
+              scriptLocation: scriptPath
+              scriptPath: app-registrations/Invoke-AppRegistrations.ps1
+              arguments: $(scriptArguments)

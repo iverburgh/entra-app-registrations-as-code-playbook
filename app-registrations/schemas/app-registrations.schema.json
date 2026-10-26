@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "app-registrations.schema.json",
+  "title": "App registrations",
+  "description": "The app registrations of a system, shared by every environment. Use #{token}# for values that differ per environment.",
+  "type": "object",
+  "required": ["appRegistrations"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "appRegistrations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/appRegistration" }
+    }
+  },
+  "definitions": {
+    "appRegistration": {
+      "type": "object",
+      "required": ["key", "displayName"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "Stable name used to refer to this application from other definitions and from environment files."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name in Entra ID; identifies the application, so it must be unique in the tenant."
+        },
+        "credential": { "$ref": "#/definitions/credential" },
+        "appRoles": {
+          "type": "array",
+          "description": "Roles of this application. Present means managed: roles not listed are removed.",
+          "items": { "$ref": "#/definitions/appRole" }
+        },
+        "scopes": {
+          "type": "array",
+          "description": "Delegated permissions this application exposes as an API. Present means managed.",
+          "items": { "$ref": "#/definitions/scope" }
+        },
+        "preAuthorizedApplications": {
+          "type": "array",
+          "description": "Clients that may use the scopes without a consent prompt. Present means managed.",
+          "items": {
+            "type": "object",
+            "required": ["application", "scopes"],
+            "additionalProperties": false,
+            "properties": {
+              "application": { "type": "string", "description": "Own key, well-known name (azure-cli, azure-powershell) or application ID." },
+              "scopes": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+            }
+          }
+        },
+        "requiredResourceAccess": {
+          "type": "array",
+          "description": "Permissions this application requests. Present means managed.",
+          "items": {
+            "type": "object",
+            "required": ["resource"],
+            "additionalProperties": false,
+            "properties": {
+              "resource": {
+                "type": "string",
+                "description": "Own key, well-known name (microsoft-graph), application ID, or the display name of another team's application."
+              },
+              "scopes": { "type": "array", "items": { "type": "string" }, "description": "Delegated permissions, by value." },
+              "roles": { "type": "array", "items": { "type": "string" }, "description": "Application permissions, by value." }
+            }
+          }
+        },
+        "redirectUris": {
+          "type": "object",
+          "description": "Per platform, the name of a redirect URI list in the environment file.",
+          "additionalProperties": false,
+          "properties": {
+            "spa": { "type": "string" },
+            "web": { "type": "string" },
+            "publicClient": { "type": "string" }
+          }
+        },
+        "assignmentRequired": {
+          "type": "boolean",
+          "default": true,
+          "description": "Only assigned users, groups and applications can get a token for this application."
+        }
+      }
+    },
+    "credential": {
+      "type": "object",
+      "required": ["type", "keyVault"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["certificate", "secret"] },
+        "keyVault": { "type": "string", "description": "Key Vault that holds the certificate or the secret." },
+        "name": { "type": "string", "description": "Secret only: name of the client secret on the application." },
+        "validityInMonths": { "type": "integer", "minimum": 1, "maximum": 24, "description": "Secret only." },
+        "tags": {
+          "type": "object",
+          "description": "Certificate only: tags on the Key Vault certificate.",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "appRole": {
+      "type": "object",
+      "required": ["value", "displayName", "allowedMemberTypes"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": "string", "pattern": "^[^\\s]+$", "description": "The value in the roles claim." },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "allowedMemberTypes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["User", "Application"] }
+        },
+        "isEnabled": { "type": "boolean", "default": true }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "required": ["value", "adminConsentDisplayName"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": "string", "pattern": "^[^\\s]+$" },
+        "type": { "enum": ["User", "Admin"], "default": "User", "description": "Admin: only an administrator can consent." },
+        "adminConsentDisplayName": { "type": "string" },
+        "adminConsentDescription": { "type": "string" },
+        "userConsentDisplayName": { "type": ["string", "null"] },
+        "userConsentDescription": { "type": ["string", "null"] },
+        "isEnabled": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

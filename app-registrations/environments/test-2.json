@@ -1,0 +1,28 @@
+{
+  "$schema": "../schemas/environment.schema.json",
+  "name": "test-2",
+  "order": 3,
+  "tokens": {
+    "environment": "test",
+    "instance": "2"
+  },
+  "owners": [
+    "orders-platform-owners"
+  ],
+  "roleMembers": {
+    "Orders.Read": [
+      "orders-testers"
+    ],
+    "Orders.Admin": [
+      "orders-testers"
+    ],
+    "Orders.Process": [
+      "sp:id-orders-processor-test-2"
+    ]
+  },
+  "redirectUris": {
+    "orders-web": [
+      "https://orders-test-2.example.com/"
+    ]
+  }
+}
