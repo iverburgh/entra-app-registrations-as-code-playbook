@@ -88,3 +88,52 @@ application stays, unmanaged. Delete it yourself when you are sure nothing uses 
 
 `AppRoleAssignment.ReadWrite.All` lets its holder grant itself any permission. Protect the service
 connection accordingly. See [Running in a pipeline](running-in-a-pipeline.md#these-permissions-are-powerful).
+
+## In your code
+
+### The fallback policy lets every signed-in caller in
+
+A fallback policy of `RequireAuthenticatedUser()` protects endpoints that declare nothing against
+anonymous callers, and against nobody else. Any account in the tenant with any role, and any
+application with a token for your API, passes it. Give every endpoint a policy, and test that it
+does. See [Securing your API](securing-your-api.md#the-fallback-policy-is-not-authorization).
+
+### Roles without the scope
+
+A user policy that checks only `roles` accepts a token obtained by any client application the user
+signs in to. Check the delegated scope (`scp`) too, and require an app-only token for application
+roles.
+
+### `scp` is one claim
+
+The scopes in a delegated token are one claim, separated by spaces: `"access_as_user Orders.Export"`.
+Comparing the whole claim with one scope works until a client asks for two. Split it.
+
+### `roles` renamed
+
+Without `MapInboundClaims = false`, ASP.NET Core renames `roles` to
+`http://schemas.microsoft.com/ws/2008/06/identity/claims/role`, and code that reads `roles` finds
+nothing. Turn the mapping off and set `RoleClaimType = "roles"`.
+
+### `AZURE_CLIENT_ID` picks the identity
+
+`DefaultAzureCredential` reads `AZURE_CLIENT_ID` and uses that user-assigned identity, even when it
+was set for something else. Choose the identity in configuration, and create that credential. See
+[Calling other services](calling-other-services.md#one-identity-chosen-explicitly).
+
+### A confidential client per request
+
+MSAL caches tokens in the client application object. Creating one per request throws the cache away,
+and asks Entra ID for a new token on every call, until it throttles you. Create it once.
+
+### Telemetry stops after disabling local authentication
+
+Once local authentication is disabled on Application Insights, telemetry sent with the
+instrumentation key is dropped without an error. Move every sender to Entra ID first, and check each
+one. See [Calling other services](calling-other-services.md#application-insights-with-entra-id).
+
+### A certificate that renews itself, until it cannot
+
+An application can roll its own certificate without permissions, but only while one is still
+valid. Once all have expired, a person has to step in. Alert on the expiry date. See
+[Credentials](credentials.md#the-application-renews-its-own-certificate).

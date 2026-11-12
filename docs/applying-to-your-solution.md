@@ -124,3 +124,14 @@ same. Two things to check:
 - **The roles.** With *assignment required* on, a user or application without a role no longer
   gets a token. That is the intent, but a developer testing against a shared environment needs a
   role too: put them, or their group, in the file.
+
+Then make the code side as deliberate as the registrations:
+
+- [Securing your API](securing-your-api.md): validate the token, turn roles and scopes into named
+  policies, and make every endpoint name one.
+- [Testing authorization](testing-authorization.md): prove it, with tokens you issue in the tests.
+- [Calling other services](calling-other-services.md): managed identities, the on-behalf-of flow,
+  and Application Insights without an instrumentation key.
+- [Access management](access-management.md): from business role to group to app role, with reviews.
+
+The [sample API](../samples/) shows all of it in one small project.

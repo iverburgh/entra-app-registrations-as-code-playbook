@@ -78,7 +78,23 @@ Start with [Getting started](docs/getting-started.md).
 | [Consent](docs/consent.md)                                | Find and grant the permissions that need an administrator      |
 | [Running in a pipeline](docs/running-in-a-pipeline.md)    | Run it unattended, with least-privilege permissions            |
 | [Applying it to your solution](docs/applying-to-your-solution.md) | Bring existing app registrations under management      |
+| [Securing your API](docs/securing-your-api.md)            | Validate tokens and turn roles and scopes into policies        |
+| [Testing authorization](docs/testing-authorization.md)    | Prove who may call what, with tokens issued in the tests       |
+| [Calling other services](docs/calling-other-services.md)  | Use managed identities, on-behalf-of, Application Insights with Entra ID |
+| [Access management](docs/access-management.md)            | Connect business roles, groups and app roles, and review them  |
 | [Pitfalls](docs/pitfalls.md)                              | Avoid the mistakes that cost an afternoon                      |
+
+## Sample API
+
+[samples/](samples/) is a small ASP.NET Core API for the `orders-api` registration: token
+validation, a policy per kind of access, the on-behalf-of flow, an explicitly chosen managed identity
+and Application Insights with Entra ID. Its tests issue their own tokens and run in memory:
+
+```powershell
+dotnet test samples/Orders.slnx
+```
+
+Requires the .NET 10 SDK.
 
 ## Repository layout
 
@@ -98,8 +114,26 @@ app-registrations/
 pipelines/
   app-registrations.yml         validate, plan, apply after approval
   templates/assert-app-registration.yml  preflight for a deployment pipeline
+samples/
+  src/Orders.Api/               the API: authentication, policies, identities, on-behalf-of
+  tests/Orders.Api.Tests/       token validation, role matrix, endpoint convention, contract tests
 tools/                          leak check and link check for this repository
 ```
+
+## Related playbooks
+
+From the same monorepo, each on its own:
+
+- [Domain-Driven Design in .NET](https://github.com/iverburgh/ddd-dotnet-playbook) — bounded
+  contexts, aggregates, domain events and the outbox in a working .NET solution.
+- [Azure App Configuration](https://github.com/iverburgh/azure-app-configuration-playbook) —
+  configuration as code, including the Key Vault references that hold the certificates created here.
+- [Copilot on Azure DevOps](https://github.com/iverburgh/copilot-azure-devops-playbook) —
+  instructions, skills and agents for a repository like this one.
+- [Path filters on Azure DevOps](https://github.com/iverburgh/azure-devops-path-filter-playbook) —
+  build and deploy only what a change touches.
+- [Renovate on Azure DevOps](https://github.com/iverburgh/renovate-azure-devops-playbook) —
+  automated dependency updates.
 
 ## License
 

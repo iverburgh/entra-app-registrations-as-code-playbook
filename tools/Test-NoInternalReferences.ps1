@@ -34,6 +34,7 @@ $localTerms = Join-Path $PSScriptRoot 'forbidden-terms.local.txt'
 # Application IDs that are the same in every tenant, and therefore safe to publish.
 $publicIds = @(
     '00000003-0000-0000-c000-000000000000' # Microsoft Graph
+    '00000002-0000-0000-c000-000000000000' # Azure AD Graph: the audience of a key proof-of-possession token
     '04b07795-8ddb-461a-bbee-02f9e1bf7b46' # Azure CLI
     '1950a258-227b-4e31-a9cf-717495945fc2' # Azure PowerShell
 )

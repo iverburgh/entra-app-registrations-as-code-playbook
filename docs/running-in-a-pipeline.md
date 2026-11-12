@@ -7,7 +7,8 @@ page is mostly about them.
 
 If your pipeline cannot get these permissions, run the script locally, as someone with the
 *Cloud Application Administrator* role. Everything else in this repository works the same. Keep the
-validation in the pull request build either way.
+validation in the pull request build either way. [Without Graph permissions](#without-graph-permissions-a-person-and-a-pipeline)
+describes how to split the work then.
 
 ## The pipeline
 
@@ -110,6 +111,39 @@ So treat the service connection as you would an administrator account: one pipel
 branch only, an approval before Apply, required reviewers on the `app-registrations/` folder. If
 your organisation will not accept that, run locally. That is a legitimate choice, not a failure:
 the configuration, validation and review still give you most of the value.
+
+## Without Graph permissions: a person and a pipeline
+
+Many organisations give no pipeline Graph permissions to write applications, full stop. Then split
+the work by who holds which right:
+
+| Step                                         | Who                                          | Rights needed                                   |
+| -------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
+| Create and update app registrations, roles, assignments | a person, running the script locally | *Cloud Application Administrator*, for the run |
+| Admin consent for new permissions            | an administrator, after the first run        | *Privileged Role Administrator* or *Global Administrator* |
+| The first certificate in Key Vault           | the same local run                           | *Key Vault Certificates Officer* on the vault   |
+| Renewing certificates                        | the application itself                       | none in Graph; see [Credentials](credentials.md#the-application-renews-its-own-certificate) |
+| Checking that a registration exists          | the deployment pipeline                      | `Application.Read.All` (read only)              |
+
+The Key Vault role is often the sticking point: a person running the script locally has no standing
+rights on a production vault, and should not. Two ways out:
+
+- **A temporary role.** A small pipeline grants the person *Key Vault Certificates Officer* on the
+  vault, waits for an approval, and removes the role again after the run. Or use Privileged
+  Identity Management, which does the same with an expiry date.
+- **A different order.** The pipeline that deploys the vault creates the certificate, with its own
+  rights on the vault, using [certificate-policy.json](../app-registrations/certificate-policy.json).
+  The script then finds it, and only adds its public key to the application. The person running it
+  needs no more than *Key Vault Certificates User* on the vault. Give the certificate the tags of
+  the definition when creating it: a tag update would need the Officer role again, and fail the run.
+
+Request admin consent as part of the first run: the plan lists the permissions an application
+requests, and [Get-ConsentStatus.ps1](../app-registrations/Get-ConsentStatus.ps1) lists what is still
+missing afterwards. Consent for a new permission is a request to an administrator; it can take days.
+Plan it ahead of the release that needs it.
+
+This is a policy choice, not a technical one. It costs speed, a person in the loop for every change,
+and buys a pipeline that cannot touch the directory.
 
 ## A preflight in deployment pipelines
 

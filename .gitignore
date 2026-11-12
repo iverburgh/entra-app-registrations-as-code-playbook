@@ -1,5 +1,9 @@
 *.log
 TestResults/
+bin/
+obj/
+.vs/
+*.user
 # Organisation-specific terms for the leak check. Never commit this file: it would publish exactly
 # the names it keeps out.
 tools/forbidden-terms.local.txt
