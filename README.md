@@ -134,6 +134,8 @@ From the same monorepo, each on its own:
   build and deploy only what a change touches.
 - [Renovate on Azure DevOps](https://github.com/iverburgh/renovate-azure-devops-playbook) —
   automated dependency updates.
+- [Circuit breakers on Azure Functions](https://github.com/iverburgh/azure-functions-circuit-breaker-playbook) —
+  a shared circuit breaker whose API is protected by app roles like the ones here.
 
 ## License
 
