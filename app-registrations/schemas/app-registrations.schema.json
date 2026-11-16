@@ -53,6 +53,12 @@
             }
           }
         },
+        "knownClientApplications": {
+          "type": "array",
+          "description": "Clients whose consent also covers the permissions this application requests, for a middle tier such as a gateway that calls on behalf of the user. Present means managed.",
+          "uniqueItems": true,
+          "items": { "type": "string", "description": "Own key, well-known name or application ID." }
+        },
         "requiredResourceAccess": {
           "type": "array",
           "description": "Permissions this application requests. Present means managed.",

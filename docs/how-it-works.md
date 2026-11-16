@@ -48,6 +48,9 @@ Now references between applications can be resolved, whichever order they were d
   another team's API. Permissions are named by value (`User.Read`) and written as IDs.
 - **Pre-authorized clients** of an own API: clients that may use its scopes without a consent
   prompt.
+- **Known client applications** of a middle tier: clients whose consent also covers the
+  permissions the middle tier requests, so that one prompt is enough. See
+  [A gateway for a SPA](gateway-with-on-behalf-of.md#consent-in-one-prompt).
 
 ### 3. Role assignments
 
@@ -72,7 +75,8 @@ pre-authorized clients in the same step.
 
 A key that is absent is left alone. A definition without `appRoles` does not remove roles added in
 the portal; one with `"appRoles": []` removes them all. The same holds for `scopes`,
-`requiredResourceAccess`, `preAuthorizedApplications` and each redirect URI platform.
+`requiredResourceAccess`, `preAuthorizedApplications`, `knownClientApplications` and each redirect
+URI platform.
 
 The script never deletes an application or service principal. Removing a definition stops managing
 that application; deleting it is a deliberate, manual step.

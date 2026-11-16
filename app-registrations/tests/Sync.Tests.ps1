@@ -174,6 +174,37 @@ Describe 'Changes to the definition' {
         $tags.owner | Should -Be 'platform-team'
         $tags.costCenter | Should -Be '42'
     }
+
+    It 'sets known client applications by application ID, and changes nothing the second time' {
+        $Changed.appRegistrations[0].knownClientApplications = @('orders-web', 'azure-cli')
+        $result = Invoke-AppRegistrationSync -Configuration (Read-TestConfiguration -Definition $Changed)
+
+        $api = Get-TestApplication 'orders-api-dev'
+        @($api.api.knownClientApplications) | Should -Be @((Get-TestApplication 'orders-web-dev').appId, '04b07795-8ddb-461a-bbee-02f9e1bf7b46')
+        $result.Action | Should -Contain 'known client applications: orders-web, azure-cli'
+        Invoke-AppRegistrationSync -Configuration (Read-TestConfiguration -Definition $Changed) | Should -BeNullOrEmpty
+    }
+
+    It 'keeps a pre-authorization changed in the same run as the known clients' {
+        $Changed.appRegistrations[0].preAuthorizedApplications = @(@{ application = 'orders-web'; scopes = @('access_as_user') })
+        $Changed.appRegistrations[0].knownClientApplications = @('orders-web')
+        Invoke-AppRegistrationSync -Configuration (Read-TestConfiguration -Definition $Changed) | Out-Null
+
+        $api = Get-TestApplication 'orders-api-dev'
+        @($api.api.preAuthorizedApplications.appId) | Should -Be @((Get-TestApplication 'orders-web-dev').appId)
+        @($api.api.knownClientApplications) | Should -Be @((Get-TestApplication 'orders-web-dev').appId)
+    }
+
+    It 'clears known client applications for [], and leaves them alone when absent' {
+        $Changed.appRegistrations[0].knownClientApplications = @('orders-web')
+        Invoke-AppRegistrationSync -Configuration (Read-TestConfiguration -Definition $Changed) | Out-Null
+        Invoke-AppRegistrationSync -Configuration (Read-TestConfiguration) | Should -BeNullOrEmpty
+
+        $Changed.appRegistrations[0].knownClientApplications = @()
+        $result = Invoke-AppRegistrationSync -Configuration (Read-TestConfiguration -Definition $Changed)
+        $result.Action | Should -Contain 'known client applications: (none)'
+        @((Get-TestApplication 'orders-api-dev').api.knownClientApplications) | Should -BeNullOrEmpty
+    }
 }
 
 Describe 'Drift in the tenant' {

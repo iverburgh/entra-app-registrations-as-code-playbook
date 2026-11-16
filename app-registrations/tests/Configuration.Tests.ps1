@@ -77,6 +77,22 @@ Describe 'Checking a configuration' {
         Get-Problems -Definition $changed | Should -Contain "Application 'orders-api': pre-authorized application 'orders-mobile' is not an own key, a well-known name or an application ID."
     }
 
+    It 'accepts known client applications by key, well-known name or application ID' {
+        $changed = Copy-AsHashtable $script:Definition
+        $changed.appRegistrations[0].knownClientApplications = @('orders-web', 'azure-cli', [guid]::Empty.Guid)
+        Get-Problems -Definition $changed | Should -BeNullOrEmpty
+    }
+
+    It 'finds a known client application that does not exist, the application itself, or one without scopes to request' {
+        $changed = Copy-AsHashtable $script:Definition
+        $changed.appRegistrations[0].knownClientApplications = @('orders-mobile', 'orders-api')
+        $changed.appRegistrations[2].knownClientApplications = @('orders-web')
+        $problems = Get-Problems -Definition $changed
+        $problems | Should -Contain "Application 'orders-api': known client application 'orders-mobile' is not an own key, a well-known name or an application ID."
+        $problems | Should -Contain "Application 'orders-api': lists itself as a known client application."
+        $problems | Should -Contain "Application 'orders-worker': has known client applications but defines no scope for them to request."
+    }
+
     It 'finds role members for a role no application defines' {
         $environment = New-TestEnvironment
         $environment.roleMembers['Orders.Typo'] = @('orders-readers')

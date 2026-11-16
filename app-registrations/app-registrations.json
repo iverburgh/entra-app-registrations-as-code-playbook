@@ -41,10 +41,40 @@
       ],
       "preAuthorizedApplications": [
         { "application": "orders-web", "scopes": ["access_as_user"] },
+        { "application": "orders-gateway", "scopes": ["access_as_user"] },
         { "application": "azure-cli", "scopes": ["access_as_user"] }
       ],
       "requiredResourceAccess": [
         { "resource": "microsoft-graph", "scopes": ["User.Read"] }
+      ]
+    },
+    {
+      "key": "orders-gateway",
+      "displayName": "orders-gateway#{instance}#-#{environment}#",
+      "credential": {
+        "type": "certificate",
+        "keyVault": "kv-orders#{instance}#-#{environment}#",
+        "tags": {
+          "owner": "orders-team",
+          "purpose": "Client credential of the orders gateway, for calls on behalf of users"
+        }
+      },
+      "appRoles": [],
+      "assignmentRequired": false,
+      "scopes": [
+        {
+          "value": "access_as_user",
+          "adminConsentDisplayName": "Use the orders application as the signed-in user",
+          "adminConsentDescription": "Lets the orders web application call the orders gateway, and the services behind it, on behalf of the signed-in user."
+        }
+      ],
+      "preAuthorizedApplications": [
+        { "application": "orders-web", "scopes": ["access_as_user"] }
+      ],
+      "knownClientApplications": ["orders-web"],
+      "requiredResourceAccess": [
+        { "resource": "orders-api", "scopes": ["access_as_user"] },
+        { "resource": "invoices-api-#{environment}#", "scopes": ["access_as_user"] }
       ]
     },
     {
@@ -69,7 +99,8 @@
       },
       "requiredResourceAccess": [
         { "resource": "microsoft-graph", "scopes": ["User.Read"] },
-        { "resource": "orders-api", "scopes": ["access_as_user"] }
+        { "resource": "orders-api", "scopes": ["access_as_user"] },
+        { "resource": "orders-gateway", "scopes": ["access_as_user"] }
       ]
     },
     {

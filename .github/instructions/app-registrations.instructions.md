@@ -10,8 +10,12 @@ applyTo: 'app-registrations/**'
   Entra ID first; otherwise the next run creates a new application.
 - Roles and scopes are matched by `value`. Never change a value to rename a role: add the new one,
   migrate, then remove the old one.
-- An absent key (`appRoles`, `scopes`, `requiredResourceAccess`, `preAuthorizedApplications`) is
-  left alone; an empty list removes everything.
+- An absent key (`appRoles`, `scopes`, `requiredResourceAccess`, `preAuthorizedApplications`,
+  `knownClientApplications`) is left alone; an empty list removes everything.
+- A middle tier that calls APIs on behalf of the user (a gateway) has its own application with a
+  scope and a credential, requests one delegated scope per downstream API, lists its client in
+  `knownClientApplications`, and is pre-authorized on own downstream APIs. With no roles, set
+  `"assignmentRequired": false` on it.
 - Role members: prefer groups; prefix names with `user:`, `group:` or `sp:` when ambiguous. A role
   member must match the role's `allowedMemberTypes`.
 - Requesting a role on an own API grants it. Permissions on other APIs need admin consent; check

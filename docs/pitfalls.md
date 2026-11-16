@@ -30,7 +30,8 @@ Add the new role, move code and members over, then remove the old one.
 ## `[]` is not the same as absent
 
 `"appRoles": []` removes every role of the application. No `appRoles` key leaves the roles alone.
-The same holds for `scopes`, `requiredResourceAccess` and `preAuthorizedApplications`.
+The same holds for `scopes`, `requiredResourceAccess`, `preAuthorizedApplications` and
+`knownClientApplications`.
 
 ## Nested groups do not get roles
 
@@ -137,3 +138,23 @@ one. See [Calling other services](calling-other-services.md#application-insights
 An application can roll its own certificate without permissions, but only while one is still
 valid. Once all have expired, a person has to step in. Alert on the expiry date. See
 [Credentials](credentials.md#the-application-renews-its-own-certificate).
+
+### A gateway that forwards the user's token
+
+A reverse proxy copies the `Authorization` header by default. Put one in front of your APIs and the
+SPA's token goes along to every API behind it, which then has to accept a token meant for something
+else. Exchange it per route instead, and remove the original header first. See
+[A gateway for a SPA](gateway-with-on-behalf-of.md#what-not-to-do).
+
+### A health probe on an authenticated path
+
+A load balancer that probes `/` takes the backend out of rotation as soon as `/` starts returning
+401, and every user gets a 502. Give the probe its own anonymous endpoint, and test that it stays
+anonymous. See [A gateway for a SPA](gateway-with-on-behalf-of.md#the-incident-a-probe-on-an-authenticated-path).
+
+### Every 401 is "sign in again"
+
+A SPA that answers every 401 with a new interactive sign-in loops when the 401 means something the
+user cannot fix, such as an API rejecting the gateway's token. Act only on a challenge that says
+what to do (`error="interaction_required"` or `"insufficient_claims"`), and let the gateway turn
+other failures into a 502.

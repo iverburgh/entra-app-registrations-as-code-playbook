@@ -224,6 +224,17 @@ function Test-AppRegistrationConfiguration {
                 if ($scope -notin $ownScopes) { $problems.Add("Application '$key': pre-authorizes scope '$scope' that it does not define.") }
             }
         }
+
+        $knownClients = @(Get-Value $app 'knownClientApplications' @())
+        foreach ($client in $knownClients) {
+            if ($client -eq $key) { $problems.Add("Application '$key': lists itself as a known client application.") }
+            elseif ($client -notmatch $script:GuidPattern -and -not $script:WellKnownApplications.ContainsKey($client) -and -not $apps.ContainsKey($client)) {
+                $problems.Add("Application '$key': known client application '$client' is not an own key, a well-known name or an application ID.")
+            }
+        }
+        if ($knownClients.Count -gt 0 -and $ownScopes.Count -eq 0) {
+            $problems.Add("Application '$key': has known client applications but defines no scope for them to request.")
+        }
     }
 
     foreach ($memberKey in $Configuration.RoleMembers.Keys) {
@@ -413,7 +424,7 @@ function New-PlaceholderApplication {
         displayName            = $DisplayName
         identifierUris         = @()
         appRoles               = @()
-        api                    = [pscustomobject]@{ requestedAccessTokenVersion = 2; oauth2PermissionScopes = @(); preAuthorizedApplications = @() }
+        api                    = [pscustomobject]@{ requestedAccessTokenVersion = 2; oauth2PermissionScopes = @(); preAuthorizedApplications = @(); knownClientApplications = @() }
         spa                    = [pscustomobject]@{ redirectUris = @() }
         web                    = [pscustomobject]@{ redirectUris = @() }
         publicClient           = [pscustomobject]@{ redirectUris = @() }
@@ -851,28 +862,52 @@ function Sync-Permissions {
         }
     }
 
+    # Both pre-authorized and known clients live in the api object; each change starts from the last.
+    $currentApi = $application.api
+
     if (Test-HasKey $definition 'preAuthorizedApplications') {
         $scopeIds = @{}
-        foreach ($s in @(Get-Value $application.api 'oauth2PermissionScopes' @())) { $scopeIds[$s.value] = $s.id }
+        foreach ($s in @(Get-Value $currentApi 'oauth2PermissionScopes' @())) { $scopeIds[$s.value] = $s.id }
         $desired = @(foreach ($client in @(Get-Value $definition 'preAuthorizedApplications' @())) {
                 $name = Get-Value $client 'application'
-                $appId = if ($All.ContainsKey($name)) { $All[$name].Application.appId } elseif ($script:WellKnownApplications.ContainsKey($name)) { $script:WellKnownApplications[$name] } else { $name }
                 [ordered]@{
-                    appId                  = $appId
+                    appId                  = Resolve-ClientApplicationId -Name $name -All $All
                     delegatedPermissionIds = @(Get-Value $client 'scopes' @() | ForEach-Object { if ($scopeIds.ContainsKey($_)) { $scopeIds[$_] } else { "new:$_" } })
                 }
             })
 
         $signature = { param($list) @($list | ForEach-Object { $a = Get-Value $_ 'appId'; @(Get-Value $_ 'delegatedPermissionIds' @()) | ForEach-Object { "$a|$_" } } | Sort-Object) -join "`n" }
-        if ((& $signature $desired) -ne (& $signature @(Get-Value $application.api 'preAuthorizedApplications' @()))) {
-            $api = Copy-AsHashtable $application.api
+        if ((& $signature $desired) -ne (& $signature @(Get-Value $currentApi 'preAuthorizedApplications' @()))) {
+            $api = Copy-AsHashtable $currentApi
             $api.preAuthorizedApplications = $desired
             $names = @(Get-Value $definition 'preAuthorizedApplications' @() | ForEach-Object { Get-Value $_ 'application' }) -join ', '
             Invoke-Change -Target $application.displayName -Action "pre-authorized clients: $names" -Script {
                 Invoke-Graph -Method PATCH -Uri "/applications/$($application.id)" -Body @{ api = $api } | Out-Null
             } | Out-Null
+            $currentApi = $api
         }
     }
+
+    if (Test-HasKey $definition 'knownClientApplications') {
+        $names = @(Get-Value $definition 'knownClientApplications' @())
+        $desired = @($names | ForEach-Object { Resolve-ClientApplicationId -Name $_ -All $All })
+        if (-not (Compare-StringSet $desired @(Get-Value $currentApi 'knownClientApplications' @()))) {
+            $api = Copy-AsHashtable $currentApi
+            $api.knownClientApplications = $desired
+            $summary = if ($names.Count) { $names -join ', ' } else { '(none)' }
+            Invoke-Change -Target $application.displayName -Action "known client applications: $summary" -Script {
+                Invoke-Graph -Method PATCH -Uri "/applications/$($application.id)" -Body @{ api = $api } | Out-Null
+            } | Out-Null
+        }
+    }
+}
+
+function Resolve-ClientApplicationId {
+    <# The application ID of an own key (a placeholder during a dry run), a well-known name, or the ID as given. #>
+    param([string] $Name, [hashtable] $All)
+    if ($All.ContainsKey($Name)) { return $All[$Name].Application.appId }
+    if ($script:WellKnownApplications.ContainsKey($Name)) { return $script:WellKnownApplications[$Name] }
+    $Name
 }
 
 #endregion

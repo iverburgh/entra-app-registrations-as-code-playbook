@@ -24,6 +24,7 @@ it with `$schema` and your editor completes and checks the keys.
 | `appRoles`                  | no       | Roles of this application. Absent: left alone. `[]`: none.                                 |
 | `scopes`                    | no       | Delegated permissions this API offers. Absent: left alone.                                 |
 | `preAuthorizedApplications` | no       | Clients that may use the scopes without a consent prompt.                                  |
+| `knownClientApplications`   | no       | Clients whose consent also covers what this middle tier requests. Absent: left alone. `[]`: none. |
 | `requiredResourceAccess`    | no       | Permissions this application requests on other APIs.                                       |
 | `redirectUris`              | no       | Per platform, the name of a redirect URI list in the environment file.                     |
 | `credential`                | no       | A certificate or client secret, kept in Key Vault. See [Credentials](credentials.md).      |
@@ -66,6 +67,21 @@ administrator), `userConsentDisplayName`, `userConsentDescription`, `isEnabled`.
 `application` is the key of an own application, a well-known name, or an application ID. The
 well-known names are `azure-cli` and `azure-powershell`; pre-authorizing `azure-cli` lets
 developers get a token for your API with `az account get-access-token --resource api://<appId>`.
+
+### Known client applications
+
+```json
+"knownClientApplications": ["orders-web"]
+```
+
+For a middle tier, such as a [gateway](gateway-with-on-behalf-of.md), that calls other APIs on
+behalf of the user. Each entry is the key of an own application, a well-known name, or an
+application ID; the script stores application IDs. When a listed client asks for this
+application's `.default` scope, one consent prompt covers both: the client's permissions on this
+application, and this application's own requested permissions on the APIs behind it. Without it,
+the user consents to the client, and the middle tier's first call on their behalf fails with
+`AADSTS65001`. The validation requires the application to define at least one scope, since a client
+cannot ask for consent to an application that offers nothing.
 
 ### Requested permission
 
@@ -166,5 +182,6 @@ with an e-mail to the vault's certificate contacts 30 days before expiry. See
 
 Checks the schemas, then the references between files: that every requested own role and scope
 exists, that roles requested by applications allow applications, that pre-authorized clients and
-scopes exist, that every role member key matches a role, that every redirect URI list exists, that
-keys and display names are unique. Run it in every pull request build; it needs no Azure access.
+scopes exist, that known client applications exist, that every role member key matches a role, that
+every redirect URI list exists, that keys and display names are unique. Run it in every pull
+request build; it needs no Azure access.

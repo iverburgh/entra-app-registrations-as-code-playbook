@@ -23,4 +23,10 @@ applyTo: '**/*.cs'
   credentials. One `TokenCredential` for all Azure SDK clients.
 - Never forward an incoming token to another API; exchange it on behalf of the user, with one scope
   per downstream API. Create the MSAL confidential client once.
+- In a gateway: accept one audience (the gateway's), take the downstream scope from cluster
+  metadata, remove the incoming `Authorization` header and cookies before exchanging, and reject
+  catch-all and anonymous routes. Map `MsalUiRequiredException` to a 401 with
+  `WWW-Authenticate: Bearer error="interaction_required"` (or `"insufficient_claims"`), a downstream
+  401 to 502, and pass a downstream 403 on. Health endpoints are anonymous and call nothing behind
+  the gateway.
 - Never log a token, a certificate or a client secret.

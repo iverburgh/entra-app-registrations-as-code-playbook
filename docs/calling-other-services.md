@@ -96,7 +96,8 @@ sequenceDiagram
 ```
 
 - **One scope per downstream service**, from configuration. A gateway in front of several APIs keeps
-  a map from route to scope, and exchanges per call.
+  a map from route to scope, and exchanges per call: see
+  [A gateway for a SPA, with on-behalf-of](gateway-with-on-behalf-of.md).
 - **Consent.** Your API's app registration requests the downstream scope
   (`requiredResourceAccess`), and needs admin consent for it ([Consent](consent.md)). Without it the
   exchange fails with `AADSTS65001`.
@@ -112,6 +113,11 @@ See [OnBehalfOfHandler.cs](../samples/src/Orders.Api/Downstream/OnBehalfOfHandle
 `DelegatingHandler` that exchanges the token on every outgoing call, and
 [MsalOnBehalfOfTokenSource.cs](../samples/src/Orders.Api/Downstream/MsalOnBehalfOfTokenSource.cs).
 The handler refuses to run without a signed-in user: on-behalf-of a background job means nothing.
+
+For a single-page app in front of several APIs, the same exchange moves into a gateway: one
+audience for the SPA, a token per API behind it. [A gateway for a SPA, with on-behalf-of](gateway-with-on-behalf-of.md)
+covers the YARP setup, consent in one prompt with `knownClientApplications`, and the error mapping
+the SPA depends on.
 
 ## Application Insights with Entra ID
 

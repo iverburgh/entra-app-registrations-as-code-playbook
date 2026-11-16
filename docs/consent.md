@@ -71,6 +71,21 @@ Rows are matched on the definition as written, not on names. `invoices-api-test`
 Run this before promoting a release that adds a permission: a missing consent in production shows
 up as an error at the first call, not at deployment.
 
+## A middle tier and its clients
+
+A gateway or API that calls other APIs on behalf of the user needs consent for those calls too,
+while the user only ever signs in to the client in front of it. Two ways to get it:
+
+- **Admin consent for the middle tier.** Grant its requested permissions once for the tenant; the
+  status lists them under the middle tier's own application. For a scope on an own API, pre-authorize
+  the middle tier on that API instead, the same way a client is pre-authorized.
+- **Combined consent.** List the client in the middle tier's `knownClientApplications`. When the
+  client asks for the middle tier's `.default` scope, one prompt covers the client's permissions and
+  the middle tier's. Useful where users may consent themselves.
+
+Without either, the user signs in and consents to the client, and the middle tier's first exchange
+fails with `AADSTS65001`. See [A gateway for a SPA](gateway-with-on-behalf-of.md#consent-in-one-prompt).
+
 ## Reading what is granted
 
 The status is read, never changed. The identity running it needs to read applications, service

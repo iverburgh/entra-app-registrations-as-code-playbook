@@ -36,6 +36,7 @@ With the registrations in code:
 | Identifier URI `api://<appId>`, v2 access tokens   | Role members: users, groups, services    |
 | App roles and delegated scopes                    | Redirect URIs                            |
 | Pre-authorized client applications                | Tokens such as `#{environment}#`         |
+| Known client applications (combined consent)      |                                          |
 | Requested API permissions, by name                |                                          |
 | Certificate or client secret, kept in Key Vault   |                                          |
 | "Assignment required"                             |                                          |
@@ -81,14 +82,23 @@ Start with [Getting started](docs/getting-started.md).
 | [Securing your API](docs/securing-your-api.md)            | Validate tokens and turn roles and scopes into policies        |
 | [Testing authorization](docs/testing-authorization.md)    | Prove who may call what, with tokens issued in the tests       |
 | [Calling other services](docs/calling-other-services.md)  | Use managed identities, on-behalf-of, Application Insights with Entra ID |
+| [A gateway for a SPA, with on-behalf-of](docs/gateway-with-on-behalf-of.md) | Put a YARP gateway between a single-page app and its APIs, exchanging the token per route |
 | [Access management](docs/access-management.md)            | Connect business roles, groups and app roles, and review them  |
 | [Pitfalls](docs/pitfalls.md)                              | Avoid the mistakes that cost an afternoon                      |
 
-## Sample API
+## Samples
 
-[samples/](samples/) is a small ASP.NET Core API for the `orders-api` registration: token
-validation, a policy per kind of access, the on-behalf-of flow, an explicitly chosen managed identity
-and Application Insights with Entra ID. Its tests issue their own tokens and run in memory:
+[samples/](samples/) holds two small ASP.NET Core applications. Their tests issue their own tokens
+and run in memory:
+
+- **`Orders.Api`**, for the `orders-api` registration: token validation, a policy per kind of
+  access, the on-behalf-of flow, an explicitly chosen managed identity and Application Insights with
+  Entra ID.
+- **`Orders.Gateway`**, for the `orders-gateway` registration: a [YARP](https://learn.microsoft.com/aspnet/core/fundamentals/servers/yarp/yarp-overview)
+  gateway in front of the APIs a single-page app calls. It accepts only tokens for itself, exchanges
+  them per route for a token to the API behind it, never forwards the user's own token, turns
+  "consent needed" into a challenge the SPA can act on, and keeps its health endpoint anonymous. See
+  [A gateway for a SPA, with on-behalf-of](docs/gateway-with-on-behalf-of.md).
 
 ```powershell
 dotnet test samples/Orders.slnx
@@ -116,7 +126,9 @@ pipelines/
   templates/assert-app-registration.yml  preflight for a deployment pipeline
 samples/
   src/Orders.Api/               the API: authentication, policies, identities, on-behalf-of
+  src/Orders.Gateway/           the YARP gateway: token exchange per route, consent challenge, health
   tests/Orders.Api.Tests/       token validation, role matrix, endpoint convention, contract tests
+  tests/Orders.Gateway.Tests/   what is forwarded with which token, error mapping, configuration checks
 tools/                          leak check and link check for this repository
 ```
 
@@ -146,6 +158,8 @@ From the same monorepo, each on its own:
   complete, abandon or dead-letter: one policy for what happens to a message when its handler fails.
 - [Azure SQL disaster recovery](https://github.com/iverburgh/azure-sql-disaster-recovery-playbook) —
   a guided point-in-time restore, with just-in-time privileged roles per step.
+- [Azure DevOps environments as code](https://github.com/iverburgh/azure-devops-environments-as-code-playbook) —
+  environments, approvals and checks as code, with security groups as approvers for the four-eyes principle.
 
 ## License
 

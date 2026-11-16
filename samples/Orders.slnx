@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Orders.Api/Orders.Api.csproj" />
+    <Project Path="src/Orders.Gateway/Orders.Gateway.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Orders.Api.Tests/Orders.Api.Tests.csproj" />
+    <Project Path="tests/Orders.Gateway.Tests/Orders.Gateway.Tests.csproj" />
   </Folder>
 </Solution>

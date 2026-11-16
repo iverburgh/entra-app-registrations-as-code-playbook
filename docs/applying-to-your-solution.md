@@ -55,7 +55,8 @@ IDs, so assignments and consent survive. Descriptions and display names can be t
 only updates them.
 
 Leave out what you do not want managed yet. An absent `appRoles`, `scopes`,
-`requiredResourceAccess`, `preAuthorizedApplications` or redirect URI platform is left alone.
+`requiredResourceAccess`, `preAuthorizedApplications`, `knownClientApplications` or redirect URI
+platform is left alone.
 
 Leave out `credential` too, at first. If an application already has a certificate under another
 name, a `credential` block makes the script add a new one named `AppReg-<displayName>`, next to it.
@@ -132,6 +133,8 @@ Then make the code side as deliberate as the registrations:
 - [Testing authorization](testing-authorization.md): prove it, with tokens you issue in the tests.
 - [Calling other services](calling-other-services.md): managed identities, the on-behalf-of flow,
   and Application Insights without an instrumentation key.
+- [A gateway for a SPA, with on-behalf-of](gateway-with-on-behalf-of.md): one token for the SPA, a
+  token per API behind the gateway.
 - [Access management](access-management.md): from business role to group to app role, with reviews.
 
-The [sample API](../samples/) shows all of it in one small project.
+The [samples](../samples/) show all of it: a small API, and a gateway in front of it.
