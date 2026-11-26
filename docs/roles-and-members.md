@@ -118,3 +118,37 @@ Every service principal is set to *assignment required* unless the definition sa
 `"assignmentRequired": false`. Then only users and applications with a role, directly or through a
 group, get a token for the application. Without it, any user in the tenant can sign in to it, and
 the roles are only as good as the checks in your code.
+
+## Azure RBAC assignments left behind
+
+App role assignments go when their principal is deleted. Azure RBAC role assignments do not: delete
+a managed identity, a service principal or a group, and its assignments on subscriptions, resource
+groups and resources stay, shown as *Identity not found* with type *Unknown*. They grant nothing,
+but they count toward the limit of role assignments per subscription. Short-lived managed
+identities reach that limit sooner than you would think, and then deployments fail to create new
+assignments.
+
+Clean them up periodically, and treat it as what it is: deleting access, which is hard to undo. A
+directory outage or a throttled lookup can make a valid principal look deleted.
+
+- **Dry run by default.** The scheduled run detects and reports. Deleting takes an explicit switch.
+- **Confirm independently.** *Unknown* in the assignment list is a candidate, not a verdict. Look the
+  principal ID up in Microsoft Graph as a user, a group and a service principal, and treat it as
+  gone only when all three say *not found*. Any other error, such as throttling or a missing
+  permission, means: keep it.
+- **Approve a report.** Export the candidates (role, principal ID, scope, assignment ID), have
+  someone review them, and delete only what is in the approved report.
+- **Check again just before deleting.** Skip an approved assignment whose principal resolves again.
+  One that became orphaned after the approval waits for the next run.
+- **A grace period.** Skip assignments younger than a day: a new principal can briefly fail to
+  resolve while the directory replicates.
+- **A circuit breaker.** Stop without deleting anything when a run would remove more than a set
+  number, or an unusual share, of the assignments in scope. That is what a directory outage looks
+  like.
+- **Protect what hurts most.** Never remove `Owner` or `User Access Administrator` automatically,
+  nor assignments inherited from a management group. Leave those to a person.
+- **Small batches.** Limit the number of scopes per run, so each report stays reviewable and a large
+  backlog drains over several runs.
+
+A delete lock on the resource, or above it, blocks removing an assignment. If the cleanup lifts the
+lock, it must put it back, also when the removal fails.

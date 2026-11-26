@@ -114,6 +114,30 @@ the first also catches a missing middleware.
 `app-registrations.json` and compares the role and scope values of `orders-api` with the constants in
 the code. Rename a role on one side only, and this test fails before anyone loses access.
 
+## Certificates: generate them, against a clock
+
+A certificate checked into a test project expires. On that day tests that passed for a year fail,
+or get skipped "for now", and a newer certificate only moves the problem a year ahead. Generate
+certificates in the test, the way `TestTokens` generates its key:
+
+```csharp
+var now = time.GetUtcNow();                              // TimeProvider; FakeTimeProvider in tests
+using var key = RSA.Create(2048);
+var request = new CertificateRequest("CN=orders-test", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+using var certificate = request.CreateSelfSigned(now.AddMinutes(-5), now.AddHours(1));
+```
+
+- **Relative to a clock, not a date.** Take the validity from the same `TimeProvider` the code under
+  test uses, such as [renewal](credentials.md#renewal) logic. Then "expires in 29 days" and
+  "expired yesterday" are test cases, not dates in the calendar.
+- **Validate at that time too.** `X509Chain` checks against the current time unless you set
+  `ChainPolicy.VerificationTime`. Trust a generated root with `ChainPolicy.CustomTrustStore` and
+  `X509ChainTrustMode.CustomRootTrust`, not by installing it.
+- **A chain, if the code builds one.** Sign the intermediate and the leaf with
+  `request.Create(issuer, ...)`, with the basic constraints, key usage and key identifier
+  extensions a real CA sets.
+- **Short-lived and in memory.** Nothing to renew, and no private key in the repository.
+
 ## What not to test here
 
 That Entra ID issues the right token for a user: that is the app registration and the

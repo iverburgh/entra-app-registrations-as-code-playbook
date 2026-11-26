@@ -85,6 +85,14 @@ it again: everything already created is found and skipped, and the run continues
 The script never deletes applications or service principals. Remove a definition and the
 application stays, unmanaged. Delete it yourself when you are sure nothing uses it.
 
+## Deleted identities leave Azure role assignments behind
+
+Deleting a managed identity, service principal or group removes its app role assignments, but not
+its Azure RBAC role assignments. Those stay as *Identity not found* and count toward the
+per-subscription limit until deployments fail. Clean them up periodically, but never on the word of
+the assignment list alone. See
+[Roles and members](roles-and-members.md#azure-rbac-assignments-left-behind).
+
 ## The pipeline's permissions are an administrator's
 
 `AppRoleAssignment.ReadWrite.All` lets its holder grant itself any permission. Protect the service
